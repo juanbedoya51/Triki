@@ -1,0 +1,134 @@
+﻿@page "/"
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using System.Text;
+@using static System.Net.Mime.MediaTypeNames;
+@inject IHttpClientFactory ClientFactory
+@inject NavigationManager oMenu
+@inject IJSRuntime JSRuntime
+
+<div class="container mt-5 justify-content-center" style="text-align:center">
+    <img src="/icon-512.png" style="border-radius:10px; max-width: 100%; width:300px" />
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-6">
+            <button type="button" class="btn btn-block mb-2" style="background-color:#18BC9C; color:white" @onclick="@JugarenLinea" disabled="@IsDisabled">
+                <i class="bi bi-globe"></i> Jugar en Línea
+            </button>
+        </div>
+        <div class="col-md-6">
+            <button type="button" class="btn btn-block mb-2" style="background-color:#18BC9C; color:white" @onclick="@JugarconAmigo" disabled="@IsDisabled">
+                <i class="bi bi-people-fill"></i> Jugar con un amigo
+            </button>
+        </div>
+        <div class="col-md-6">
+            <button type="button" class="btn btn-block mb-2" style="background-color:#18BC9C; color:white" @onclick="@Unirse" disabled="@IsDisabled">
+                <i class="bi bi-people-fill"></i> Unirme a una sala
+            </button>
+        </div>
+        <div class="col-md-6">
+            <button type="button" class="btn btn-block mb-2" style="background-color:#18BC9C; color:white" @onclick="@VerJuego" disabled="@IsDisabled">
+                <i class="bi bi-eye-fill"></i> Ver Juego
+            </button>
+        </div>
+        <div class="col-md-12" style="display: flex; justify-content: flex-end; align-items: center;">
+            <a class="btn mb-2" style="background-color: #2C3E50; color:white; border-radius: 60px; display: flex; align-items: center;" target="_blank" href="https://github.com/juanbedoya51">
+                <span style="margin-right: 5px;">&#64;juanbedoya51</span>
+                <i class="bi bi-github" style="font-size: 30px;"></i>
+            </a>
+        </div>
+    </div>
+</div>
+
+@code {
+    DateTime referencia = new DateTime(1970, 1, 1); // Punto de partida
+    private string User { get; set; }
+    private string IdUser { get; set; }
+    private bool IsDisabled = false;
+
+    private class RespuestaPvP
+    {
+        public string uid { get; set; }
+        public string playUrl { get; set; }
+        public string watchUrl { get; set; }
+    }
+
+    private class RespuestaPvR
+    {
+        public string uid { get; set; }
+        public string baseUrl { get; set; }
+    }
+
+
+    private async Task JugarconAmigo()
+    {
+        User = await JSRuntime.InvokeAsync<string>("prompt", "Ingrese un nombre de usuario sin espacios");
+        if (!string.IsNullOrEmpty(User))
+        {
+            IsDisabled = true;
+            DateTime fechaHoraActual = DateTime.Now;
+            TimeSpan tiempoTranscurrido = fechaHoraActual - referencia;
+            int segundosDesdeReferencia = (int)tiempoTranscurrido.TotalSeconds;
+            IdUser = User + segundosDesdeReferencia;
+
+            var client = new HttpClient();
+            var request = new HttpRequestMessage(HttpMethod.Post, "https://papergames.io/api/v2/game-session/player-vs-player");
+            request.Headers.Add("x-api-key", "apiKey_59cd0dc1673d3a286f4ff8271babc578ea0a1e550178dc59ffcdf6e32c4975ca");
+            var content = new StringContent("{\r\n  \"gameType\": \"TicTacToe\",\r\n  \"language\": \"en\",\r\n  \"inactivityTimeout\": 40,\r\n  \"timerTimeout\": 120,\r\n  \"boardSize\": \"3x3\",\r\n  \"maxGames\": 3\r\n}", null, "application/json");
+            request.Content = content;
+            var response = await client.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+
+            if (response.IsSuccessStatusCode)
+            {
+                using var responseStream = await response.Content.ReadAsStreamAsync();
+                RespuestaPvP oRespuesta = await JsonSerializer.DeserializeAsync
+                    <RespuestaPvP>(responseStream);
+                oMenu.NavigateTo($"/juegoPvP/{oRespuesta.uid}/{User}/{IdUser}");
+            }
+        }
+    }
+
+    private async Task JugarenLinea()
+    {
+        User = await JSRuntime.InvokeAsync<string>("prompt", "Ingrese un nombre de usuario sin espacios");
+        if (!string.IsNullOrEmpty(User))
+        {
+            IsDisabled = true;
+            DateTime fechaHoraActual = DateTime.Now;
+            TimeSpan tiempoTranscurrido = fechaHoraActual - referencia;
+            int segundosDesdeReferencia = (int)tiempoTranscurrido.TotalSeconds;
+            IdUser = User + segundosDesdeReferencia;
+
+            var client = new HttpClient();
+            var request = new HttpRequestMessage(HttpMethod.Post, "https://papergames.io/api/v2/game-session/player-vs-random");
+            request.Headers.Add("x-api-key", "apiKey_59cd0dc1673d3a286f4ff8271babc578ea0a1e550178dc59ffcdf6e32c4975ca");
+            string jsonContent = $"{{\r\n  \"gameType\": \"TicTacToe\",\r\n  \"language\": \"en\",\r\n  \"userId\": \"{IdUser}\",\r\n  \"username\": \"{User}\"\r\n}}";
+            var content = new StringContent(jsonContent, null, "application/json");
+            request.Content = content;
+            var response = await client.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            var oRespuesta = await response.Content.ReadFromJsonAsync<RespuestaPvR>();
+            oMenu.NavigateTo($"/juegoPvR/{oRespuesta.uid}");
+        }
+    }
+
+    private async Task Unirse()
+    {
+        var codigo = await JSRuntime.InvokeAsync<string>("prompt", "Ingrese el código del juego");
+        if (!string.IsNullOrEmpty(codigo))
+        {
+            IsDisabled = true;
+            oMenu.NavigateTo($"/juegoPvP/{codigo}");
+        }
+    }
+
+    private async Task VerJuego()
+    {
+        var codigo = await JSRuntime.InvokeAsync<string>("prompt", "Ingrese el código del juego");
+        if (!string.IsNullOrEmpty(codigo))
+        {
+            IsDisabled = true;
+            oMenu.NavigateTo($"/juegoVer/{codigo}");
+        }
+    }
+}

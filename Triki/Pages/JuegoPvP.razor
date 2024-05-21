@@ -1,0 +1,89 @@
+﻿@page "/juegoPvP/{idjuego}/{username}/{externalUserId}"
+@page "/juegoPvP/{idjuego}"
+@inject IJSRuntime JSRuntime
+@inject NavigationManager oMenu
+
+@if (!string.IsNullOrEmpty(externalUserId))
+{
+    <iframe src="@urliframe" style="width:100%; height:94vh"></iframe>
+    <a class="btn btn-lg" href="/" style="
+    position: absolute;
+    left: -40px;
+    margin: 10px;
+    border-radius: 60px;
+    width: 100px;
+    background: #2C3E50;
+    color: white;
+    text-align: right;
+    font-size: large;
+    margin-top: 80vh;
+    ">
+        <i class="bi bi-house-fill" style="font-size: 30px;"></i>
+    </a>
+    <div class="row align-items-center m-0">
+        <h3 class="mb-0 col-auto text-white">Código de la sala: @idJuego</h3>
+        <button @onclick="CopiarValor" class="btn btn-sm col-auto" type="button" style="background-color:#18BC9C; color:white" title="Copiar">
+            <i class="bi bi-copy"></i>
+        </button>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string idJuego { get; set; }
+    [Parameter]
+    public string username { get; set; }
+    [Parameter]
+    public string externalUserId { get; set; }
+
+    public string urliframe { get; set; }
+    DateTime referencia = new DateTime(1970, 1, 1); // Punto de partida
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            if (!string.IsNullOrEmpty(username))
+            {
+                if (string.IsNullOrEmpty(externalUserId))
+                {
+                    DateTime fechaHoraActual = DateTime.Now;
+                    TimeSpan tiempoTranscurrido = fechaHoraActual - referencia;
+                    int segundosDesdeReferencia = (int)tiempoTranscurrido.TotalSeconds;
+                    externalUserId = username + segundosDesdeReferencia;
+
+                    urliframe = $"https://papergames.io/en/r/{idJuego}/embed/play?username={username}&externalUserId={externalUserId}";
+                }
+                else
+                {
+                    urliframe = $"https://papergames.io/en/r/{idJuego}/embed/play?username={username}&externalUserId={externalUserId}";
+                }
+            }
+            else
+            {
+                username = await JSRuntime.InvokeAsync<string>("prompt", "Ingrese un nombre de usuario sin espacios");
+                if (!string.IsNullOrEmpty(username))
+                {
+                    DateTime fechaHoraActual = DateTime.Now;
+                    TimeSpan tiempoTranscurrido = fechaHoraActual - referencia;
+                    int segundosDesdeReferencia = (int)tiempoTranscurrido.TotalSeconds;
+                    externalUserId = username + segundosDesdeReferencia;
+
+                    oMenu.NavigateTo($"/juegoPvP/{idJuego}/{username}/{externalUserId}");
+                    urliframe = $"https://papergames.io/en/r/{idJuego}/embed/play?username={username}&externalUserId={externalUserId}";
+                }
+                else
+                {
+                    oMenu.NavigateTo("/");
+                }
+            }
+            StateHasChanged();
+        }
+    }
+
+    private async Task CopiarValor()
+    {
+        // Llama a la función de JavaScript para copiar al portapapeles
+        await JSRuntime.InvokeAsync<string>("navigator.clipboard.writeText", idJuego);
+    }
+}

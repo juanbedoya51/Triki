@@ -1,0 +1,43 @@
+﻿@page "/juegoVer/{idjuego}"
+@inject IJSRuntime JSRuntime
+@inject NavigationManager oMenu
+
+<iframe src="@urliframe" style="width:100%; height:94vh"></iframe>
+<a class="btn btn-lg" href="/" style="
+    position: absolute;
+    left: -40px;
+    margin: 10px;
+    border-radius: 60px;
+    width: 100px;
+    background: #2C3E50;
+    color: white;
+    text-align: right;
+    font-size: large;
+    margin-top: 80vh;
+">
+    <i class="bi bi-house-fill" style="font-size: 30px;"></i>
+</a>
+<div class="row align-items-center m-0">
+    <h3 class="mb-0 col-auto text-white">Código de la sala: @idJuego</h3>
+    <button @onclick="CopiarValor" class="btn btn-sm col-auto" type="button" style="background-color:#18BC9C; color:white" title="Copiar">
+        <i class="bi bi-copy"></i>
+    </button>
+</div>
+
+@code {
+    [Parameter]
+    public string idJuego { get; set; }
+
+    public string urliframe { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        urliframe = $"https://papergames.io/en/r/{idJuego}/embed";
+    }
+
+    private async Task CopiarValor()
+    {
+        // Llama a la función de JavaScript para copiar al portapapeles
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", idJuego);
+    }
+}
